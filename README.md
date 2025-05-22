@@ -4,4 +4,4 @@
 - purevsh
 ** purvesh **
 ''' purvesh '''
-<pre> <code> ```bash sudo apt update && sudo apt install nginx ``` </code> </pre>
+<pre> <code> bash sudo apt update && sudo apt install nginx  </code> </pre>
