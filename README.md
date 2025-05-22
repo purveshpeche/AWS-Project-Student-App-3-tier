@@ -5,3 +5,4 @@
 ** purvesh **
 ''' purvesh '''
 <pre> <code> bash sudo apt update && sudo apt install nginx  </code> </pre>
+![Alt Text](https://example.com/image.png)
