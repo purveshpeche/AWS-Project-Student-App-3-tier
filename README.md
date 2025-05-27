@@ -1,236 +1,279 @@
 
 # $${\color{orange} \textbf{Project}: \textbf{3-tier} \ \textbf{Student} \ \textbf{App}}$$
-  
-## $\color{green} \textbf{Prerequisite:}$
-- VPC 
-- Subnets
-- Route Table 
-- Nat Gateway
-- Internet Gateway
-- RDS 
+  # 🌟 3-Tier Student Application Deployment on AWS
 
-### $\color{blue} \textbf{Create \textbf VPC }$
-- Name: VPC-3-tier
-- CIDR: 192.168.0.0/16
+Welcome to the **3-Tier Student App** project! This guide walks you through deploying a scalable, secure, and robust 3-tier web application on AWS using a VPC, EC2 instances, RDS, and more. Follow these steps to set up a student management application with an Nginx frontend, Tomcat application server, and MySQL database.
 
-### $\color{blue} \textbf{Create \ Subnets}$
-1.Subnet-1
-- Name: Public-Subnet-Nginx
-- CIDR: 192.168.1.0/24
+---
 
-2.Subnet-2
-- Name: Private-Subnet-Tomcat
-- CIDR: 192.168.2.0/24
+## 📋 Prerequisites
 
-3.Subnet-3
-- Name:Private-Subnet-Database
-- CIDR: 192.168.3.0/24
+Before you begin, ensure you have the following:
+- **AWS Account** with access to VPC, EC2, and RDS services
+- Basic understanding of AWS networking (VPC, subnets, route tables)
+- SSH client and key pair for accessing EC2 instances
+- Familiarity with Linux commands
 
-4. Subnet-4
-- Name:Public-Subnet-LB
-- CIDR: 192.168.4.0/24
-  
-### $\color{blue} \textbf{Create \ Internet \ Gateway }$
-- Name: IGW-3-tier
-- attach igw to vpc
+---
 
-### $\color{blue} \textbf{Create \ Nat \ Gateway }$
-- Name: NAT-3-tier
-- create in public subnet
+## 🏗️ Architecture Overview
 
-### $\color{blue} \textbf{Create \ Route \ Table }$
-1. RT-Public-Subnet
-   - add public subnet
-   - add igw
-2. RT-Private-Subnet
-   - add private subnets
-   - add nat
+This project sets up a **3-tier architecture**:
+1. **Presentation Layer**: Nginx server in a public subnet
+2. **Application Layer**: Tomcat server in a private subnet
+3. **Data Layer**: MySQL database (RDS) in a private subnet
 
-![vpc-flow](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/aaae3b25-2030-453e-992b-c4ae9a2291b9)
+![Architecture Diagram](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/vpc-flow.png)
 
-### $\color{blue} \textbf{Create \ EC2 \ Instances }$
+---
 
-1. Nginx-Server-Public  ->create in public subnet ->allow port = 80,22
-2. Tomcat-Server-Private ->create in private subnet ->allow port = 8080,22
-3. Database-Server-Private ->create in private subnet ->allow port = 3306,22
+## 🛠️ Step-by-Step Setup
 
-![instances](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/e2080675-51d3-4101-824a-81129830187e)
+### 1. Create a VPC
+Set up a Virtual Private Cloud (VPC) to host the application.
 
+- **Name**: `VPC-3-tier`
+- **CIDR Block**: `192.168.0.0/16`
 
-### $\color{blue} \textbf{Create \ Database \ In \ RDS  }$
-- Go To RDS
-- Created Database
-- Standard create 
-- Free tier 
-- DB name – database-1 
-- Username – admin 
-- Password – Passwd123$
-- VPC –  VPC-3-tier
-- Connect to Instance -> choose database instance
-- Public access – no 
-- A.Z. – no preference 
-- Create database 
-- Edit security group -> Add 3306 port
+### 2. Create Subnets
+Create four subnets for different components of the application.
 
-![database](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/31d6e98c-986a-41ad-bbe8-0418e9beaa17)
+| Subnet Name               | Type       | CIDR Block       |
+|---------------------------|------------|------------------|
+| `Public-Subnet-Nginx`     | Public     | `192.168.1.0/24` |
+| `Public-Subnet-LB`        | Public     | `192.168.4.0/24` |
+| `Private-Subnet-Tomcat`   | Private    | `192.168.2.0/24` |
+| `Private-Subnet-Database` | Private    | `192.168.3.0/24` |
 
-### $$\color{green} \textbf {Connect To Nginx-Server-Public }$$
+### 3. Configure Internet Gateway
+Enable internet access for public subnets.
 
-![nginx-server](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/0cbb6175-9570-4ce7-a4ef-4cd7b5b24ceb)
+- **Name**: `IGW-3-tier`
+- **Action**: Attach to `VPC-3-tier`
 
-- connect to instance
-- change hostname
-  
-- create file with name 3-tier-key.pem
-  ```` 
-  vim 3-tier-key.pem
-  ````
-- copy private key and paste it here
- 
-### $$\color{orange} \textbf {Now SSH  into Database  Server}$$
+### 4. Set Up NAT Gateway
+Allow private subnets to access the internet for updates.
 
-![database-instance](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/8159a278-d612-441e-93da-d581428cdd3a)
+- **Name**: `NAT-3-tier`
+- **Location**: Place in `Public-Subnet-Nginx`
 
-````
-sudo -i
-````
-````
-yum install mariadb105-server -y
-````
-````
-systemctl start mariadb
-````
-````
-systemctl enable mariadb
-````
-### $\color{orange} \textbf{Log \ in \ into \ database}$
+### 5. Configure Route Tables
+Create route tables to manage traffic.
 
-![login into database](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/ba0c082a-060f-48f9-8520-83c906337251)
+- **Public Route Table (`RT-Public-Subnet`)**
+  - Associate with: `Public-Subnet-Nginx`, `Public-Subnet-LB`
+  - Route: `0.0.0.0/0` → `IGW-3-tier`
+- **Private Route Table (`RT-Private-Subnet`)**
+  - Associate with: `Private-Subnet-Tomcat`, `Private-Subnet-Database`
+  - Route: `0.0.0.0/0` → `NAT-3-tier`
 
-````
-mysql -h rds-endpoint   -u admin -pPasswd123$
-````
-Note: replace rds-endpoint with actual endpoint value
+---
 
-````
-show databases;
-````
-````
-create database  studentapp;
-````
-````
-use studentapp;
-````
+## 🚀 Deploy EC2 Instances
 
-### $\color{blue} \textbf{Run \ this \ query \ to \ create \ table:}$
-````
- CREATE TABLE if not exists students(student_id INT NOT NULL AUTO_INCREMENT,  
-	student_name VARCHAR(100) NOT NULL,  
-	student_addr VARCHAR(100) NOT NULL,   
-	student_age VARCHAR(3) NOT NULL,      
-	student_qual VARCHAR(20) NOT NULL,     
-	student_percent VARCHAR(10) NOT NULL,   
-	student_year_passed VARCHAR(10) NOT NULL,  
-	PRIMARY KEY (student_id)  
-);
-````
-````
-show tables;
-````
-Logout from database:
-````
-exit
-````
-#### $${\color{green} \textbf {Back to nginx-server}}$$
-  
-### $${\color{magenta} \textbf{Now SSH into Tomcat Server}}$$
+Create EC2 instances for each tier with the specified configurations.
 
-![tomcat-server](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/a6cd6922-7be0-4f6b-ab56-d69423093ae5)
+| Instance Name             | Subnet                     | Ports Allowed |
+|---------------------------|----------------------------|---------------|
+| `Nginx-Server-Public`     | `Public-Subnet-Nginx`      | 80, 22        |
+| `Tomcat-Server-Private`   | `Private-Subnet-Tomcat`    | 8080, 22      |
+| `Database-Server-Private` | `Private-Subnet-Database`  | 3306, 22      |
 
-- ssh -i 3-tier-key.pem  ec2-user@ip-of-tomcat-vm
-````
-sudo -i
-````
-````
-yum install java -y
-````
+![EC2 Instances](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/instances.png)
 
-````
-curl -O https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.105/bin/apache-tomcat-9.0.105.tar.gz
-````
-````
-tar -xzvf apache-tomcat-9.0.105.tar.gz -C /opt/
-````
-**go to webapps dir and download .war file(application)**
-````
-cd /opt/apache-tomcat-9.0.105/webapps
-````
-````
-curl -O https://s3-us-west-2.amazonaws.com/studentapi-cit/student.war
-````
-````
-cd ../lib
-````
+---
 
-````
-curl -O https://s3-us-west-2.amazonaws.com/studentapi-cit/mysql-connector.jar
-````
-### $\color{magenta} \textbf{ MODIFY \ context.xml}$
-````
-cd apache-tomcat-9.0.90.tar.gz/conf
-````
-````
-vim context.xml
-````
-add below line [connection string] at line 21
-````
- <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource"
-               maxTotal="100" maxIdle="30" maxWaitMillis="10000"
-               username="USERNAME" password="PASSWORD" driverClassName="com.mysql.jdbc.Driver"
-               url="jdbc:mysql://DB-ENDPOINT:3306/DATABASE-NAME"/>
+## 🗄️ Set Up RDS Database
 
-````
-![image](https://github.com/user-attachments/assets/1dd0a494-6e94-4513-9164-688bd2860b48)
+Create a MySQL database using AWS RDS.
 
+- **Creation Method**: Standard Create
+- **Template**: Free Tier
+- **DB Name**: `database-1`
+- **Username**: `admin`
+- **Password**: `Passwd123$`
+- **VPC**: `VPC-3-tier`
+- **Subnet**: `Private-Subnet-Database`
+- **Public Access**: No
+- **Availability Zone**: No preference
+- **Security Group**: Add inbound rule for port `3306`
 
-````
-cd ../bin
-````
-````
-chmod +x catalina.sh
-````
-````
-./catalina.sh start
-````
+![RDS Setup](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/database.png)
 
+---
 
-````
-exit
-````
-### $${\color{green} \textbf {Back to nginx-server}}$$
+## 🔗 Connect to Instances
 
-````
-  sudo yum install nginx -y
-````
-````
-sudo vim /etc/nginx/nginx.conf
-````
-- :set nu
-(enter below data in line 47 in between error and location)
-````
-location / {
-proxy_pass http://private-IP-tomcat:8080/student/;
-}
-````
-![image](https://github.com/user-attachments/assets/31feb10d-d005-4240-b629-839b8a596777)
+### Connect to `Nginx-Server-Public`
+1. SSH into the instance using your key pair.
+2. Create a file for the private key:
+   ```bash
+   vim 3-tier-key.pem
+   ```
+3. Copy and paste the private key into the file.
+4. Change the hostname for clarity:
+   ```bash
+   sudo hostnamectl set-hostname nginx-server
+   ```
 
-- :wq  ->save file
+![Nginx Server](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/nginx-server.png)
 
-````
-sudo systemctl start nginx
-````
+### Connect to `Database-Server-Private`
+1. SSH into the instance:
+   ```bash
+   ssh -i 3-tier-key.pem ec2-user@<database-server-private-ip>
+   ```
+2. Install MariaDB client:
+   ```bash
+   sudo -i
+   yum install mariadb105-server -y
+   systemctl start mariadb
+   systemctl enable mariadb
+   ```
+3. Connect to the RDS database:
+   ```bash
+   mysql -h <rds-endpoint> -u admin -pPasswd123$
+   ```
+   Replace `<rds-endpoint>` with the actual RDS endpoint.
 
-## $\color{red} \textbf{Go \ To \ Browser \ Hit \ Public-IP \ Nginx}$
-![nginx-output](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/b2929899-fee8-4790-8178-c870faa55124)
+4. Create the `studentapp` database and table:
+   ```sql
+   show databases;
+   create database studentapp;
+   use studentapp;
+   CREATE TABLE if not exists students (
+       student_id INT NOT NULL AUTO_INCREMENT,
+       student_name VARCHAR(100) NOT NULL,
+       student_addr VARCHAR(100) NOT NULL,
+       student_age VARCHAR(3) NOT NULL,
+       student_qual VARCHAR(20) NOT NULL,
+       student_percent VARCHAR(10) NOT NULL,
+       student_year_passed VARCHAR(10) NOT NULL,
+       PRIMARY KEY (student_id)
+   );
+   show tables;
+   exit
+   ```
 
-![register-students](https://github.com/abhipraydhoble/Project-3-tier-Student-App/assets/122669982/210a4bef-8fc2-4ada-9faa-ad3f8b751958)
+![Database Login](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/login_into_database.png)
+
+---
+
+## ⚙️ Configure Tomcat Server
+
+1. SSH into `Tomcat-Server-Private`:
+   ```bash
+   ssh -i 3-tier-key.pem ec2-user@<tomcat-server-private-ip>
+   sudo -i
+   ```
+2. Install Java:
+   ```bash
+   yum install java -y
+   ```
+3. Download and extract Tomcat:
+   ```bash
+   curl -O https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.105/bin/apache-tomcat-9.0.105.tar.gz
+   tar -xzvf apache-tomcat-9.0.105.tar.gz -C /opt/
+   ```
+4. Deploy the student application:
+   ```bash
+   cd /opt/apache-tomcat-9.0.105/webapps
+   curl -O https://s3-us-west-2.amazonaws.com/studentapi-cit/student.war
+   ```
+5. Add MySQL connector:
+   ```bash
+   cd ../lib
+   curl -O https://s3-us-west-2.amazonaws.com/studentapi-cit/mysql-connector.jar
+   ```
+6. Modify `context.xml`:
+   ```bash
+   cd ../conf
+   vim context.xml
+   ```
+   Add the following at line 21:
+   ```xml
+   <Resource name="jdbc/TestDB" auth="Container" type="javax.sql.DataSource"
+             maxTotal="100" maxIdle="30" maxWaitMillis="10000"
+             username="admin" password="Passwd123$" driverClassName="com.mysql.jdbc.Driver"
+             url="jdbc:mysql://<rds-endpoint>:3306/studentapp"/>
+   ```
+   Replace `<rds-endpoint>` with the actual RDS endpoint.
+
+7. Start Tomcat:
+   ```bash
+   cd ../bin
+   chmod +x catalina.sh
+   ./catalina.sh start
+   exit
+   ```
+
+![Tomcat Setup](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/tomcat-server.png)
+
+---
+
+## 🌐 Configure Nginx Server
+
+1. Return to `Nginx-Server-Public`:
+   ```bash
+   ssh -i 3-tier-key.pem ec2-user@<nginx-server-public-ip>
+   ```
+2. Install and configure Nginx:
+   ```bash
+   sudo yum install nginx -y
+   sudo vim /etc/nginx/nginx.conf
+   ```
+3. Add the following at line 47 (between `error` and `location` blocks):
+   ```nginx
+   location / {
+       proxy_pass http://<tomcat-private-ip>:8080/student/;
+   }
+   ```
+   Replace `<tomcat-private-ip>` with the private IP of the Tomcat instance.
+
+4. Save and start Nginx:
+   ```bash
+   :wq
+   sudo systemctl start nginx
+   ```
+
+![Nginx Config](https://github.com/user-attachments/assets/31feb10d-d005-4240-b629-839b8a596777)
+
+---
+
+## 🎉 Test the Application
+
+1. Open a browser and navigate to the public IP of `Nginx-Server-Public`.
+2. You should see the student application interface.
+3. Register and manage student records through the web interface.
+
+![Application Output](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/nginx-output.png)
+![Register Students](https://github.com/abhipraydhoble/Project-3-tier-Student-App/raw/main/assets/register-students.png)
+
+---
+
+## 🔐 Security Best Practices
+
+- Restrict security group rules to allow only necessary ports.
+- Store the `3-tier-key.pem` securely and never expose it publicly.
+- Use AWS Secrets Manager for sensitive data like RDS credentials.
+- Regularly update and patch EC2 instances and software.
+
+---
+
+## 🚀 Next Steps
+
+- **Add a Load Balancer**: Place it in `Public-Subnet-LB` for high availability.
+- **Enable Auto Scaling**: Scale Tomcat instances based on demand.
+- **Monitor with CloudWatch**: Set up alarms and logs for performance monitoring.
+- **Backup RDS**: Configure automated backups for data safety.
+
+---
+
+## 📚 Resources
+
+- [AWS VPC Documentation](https://docs.aws.amazon.com/vpc/)
+- [AWS RDS Documentation](https://docs.aws.amazon.com/AmazonRDS/)
+- [Tomcat 9 Documentation](https://tomcat.apache.org/tomcat-9.0-doc/)
+- [Nginx Documentation](https://nginx.org/en/docs/)
+
+Happy deploying! 🚀
